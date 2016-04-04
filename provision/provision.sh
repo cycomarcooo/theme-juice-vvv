@@ -365,6 +365,10 @@ apache_setup() {
   # Enable mod_rewrite
   a2enmod rewrite
 
+  # Enable SSL
+  a2enmod ssl
+  a2ensite a2ensite default-ssl.conf
+
   # Allow phpbrew to access apache files
   chmod -R oga+rw /usr/lib/apache2/modules
   chmod -R oga+rw /etc/apache2
