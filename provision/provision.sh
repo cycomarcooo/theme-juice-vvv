@@ -228,6 +228,9 @@ package_install() {
   # Disable ipv6 as some ISPs/mail servers have problems with it
   echo "inet_protocols = ipv4" >> "/etc/postfix/main.cf"
 
+  # Fix locale issue
+  echo "LC_ALL=\"en_US.UTF-8\"" >> "/etc/environment"
+
   # Provide our custom apt sources before running `apt-get update`
   ln -sf /srv/config/apt-sources.list /etc/apt/sources.list.d/vvv-sources.list
   echo "Linked custom apt sources"
