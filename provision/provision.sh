@@ -81,12 +81,12 @@ apt_package_check_list=(
   libmcrypt4
   libmagickwand-dev
   libmagickcore-dev
+  libmemcached-dev
 
   # Apache is installed as the default web server
-	apache2-mpm-prefork
   apache2-dev
-	libapache2-mod-fastcgi
-  libapache2-mod-php5
+  apache2-mpm-worker
+  libapache2-mod-fastcgi
 
   # Memcached is made available for object caching
   memcached
@@ -418,6 +418,7 @@ php_setup() {
   rsync -rvzh "/srv/config/php5-config/php-custom.ini" "/etc/php5/apache2/custom-conf.d/php-custom.ini"
   rsync -rvzh "/srv/config/php5-config/opcache.ini" "/etc/php5/apache2/custom-conf.d/opcache.ini"
   rsync -rvzh "/srv/config/php5-config/xdebug.ini" "/etc/php5/apache2/custom-conf.d/xdebug.ini"
+  rsync -rvzh "/srv/config/php5-config/memcached.ini" "/etc/php5/apache2/custom-conf.d/memcached.ini"
 
   # Find the path to Xdebug and prepend it to xdebug.ini
   XDEBUG_PATH=$(find /usr -name 'xdebug.so' | head -1)
@@ -426,6 +427,11 @@ php_setup() {
   echo " * /srv/config/php5-config/php-custom.ini         -> /etc/php5/apache2/custom-conf.d/php-custom.ini"
   echo " * /srv/config/php5-config/opcache.ini            -> /etc/php5/apache2/custom-conf.d/opcache.ini"
   echo " * /srv/config/php5-config/xdebug.ini             -> /etc/php5/apache2/custom-conf.d/xdebug.ini"
+
+  # Copy fastchi wrapper from local
+  rsync -rvzh "/srv/config/php5-config/php-fastcgi-wrapper" "/usr/local/bin/php-fastcgi-wrapper"
+  chmod +x /usr/local/bin/php-fastcgi-wrapper
+  echo " * /srv/config/php5-config/php-fastcgi-wrapper    -> /usr/local/bin/php-fastcgi-wrapper"
 
   # Copy memcached configuration from local
   rsync -rvzh "/srv/config/memcached-config/memcached.conf" "/etc/memcached.conf"
@@ -492,7 +498,7 @@ if [[ ! -f "$SOFILE" ]]; then
 
   if [[ "$REPLY" =~ ^[Yy]$ ]]; then
     echo "Installing PHP version $VERSION..."
-    sudo -E -i -u vagrant phpbrew install "php-$VERSION" +default +mysql +debug +iconv +apxs2=/usr/bin/apxs2 -- --with-mysql-sock=/var/run/mysqld/mysqld.sock --with-config-file-scan-dir=/etc/php5/apache2/custom-conf.d/
+    sudo -E -i -u vagrant phpbrew install "php-$VERSION" +default +mysql +debug +cgi +opcache -- --with-mysql-sock=/var/run/mysqld/mysqld.sock --with-config-file-scan-dir=/etc/php5/apache2/custom-conf.d/ --enable-fastcgi --enable-opcache
   else
     exit 0
   fi
@@ -506,19 +512,10 @@ sudo -E su vagrant <<END
 
   echo "Installing PHP extensions for version $VERSION..."
   phpbrew ext install openssl || echo "Failed to install openssl"
-  phpbrew ext install memcache || echo "Failed to install memcache"
+  phpbrew ext install memcached -- --disable-memcached-sasl || echo "Failed to install memcache"
   phpbrew ext install imagick || echo "Failed to install imagick"
   phpbrew ext install xdebug && phpbrew ext disable xdebug || echo "Failed to install xdebug"
 END
-
-if [[ -f "$SOFILE" ]]; then
-  echo "Updating contents of $CONFFILE to load PHP version $VERSION..."
-  echo "LoadModule php5_module $SOFILE" > "$CONFFILE"
-else
-  echo "Could not locate $SOFILE"
-  echo "Failed to fully install PHP version $VERSION"
-  exit 1
-fi
 
 echo "Restarting Apache..."
 sudo service apache2 restart
