@@ -124,11 +124,6 @@ apt_package_check_list=(
   # trouble with in Linux.
   dos2unix
 
-  # Nodejs for use by grunt
-  g++
-  nodejs
-  npm
-
   # Mailcatcher dependency
   libsqlite3-dev
 )
@@ -253,13 +248,13 @@ package_install() {
   fi
 }
 
-tools_install() {
+tools_setup() {
 
   # npm
   #
   # Make sure we have the latest npm version and the update checker module
-  npm install -g npm
-  npm install -g npm-check-updates
+  sudo -i -u vagrant npm install -g npm
+  sudo -i -u vagrant npm install -g npm-check-updates
 
   # xdebug
   #
@@ -308,27 +303,37 @@ tools_install() {
     COMPOSER_HOME=/usr/local/src/composer composer global update
   fi
 
-  # node
-  #
-  # Create a symlink for nodejs->node.
-  echo "Adding node symlink..."
-  ln -sf "$(which nodejs)" "/usr/local/bin/node"
-
   # Grunt
   #
   # Install or update Grunt based on current state.
   if [[ "$(grunt --version)" ]]; then
     echo "Updating Grunt CLI..."
-    npm update -g grunt-cli &>/dev/null
-    npm update -g grunt-sass &>/dev/null
-    npm update -g grunt-cssjanus &>/dev/null
-    npm update -g grunt-rtlcss &>/dev/null
+    sudo -i -u vagrant npm update -g grunt-cli &>/dev/null
   else
     echo "Installing Grunt CLI..."
-    npm install -g grunt-cli &>/dev/null
-    npm install -g grunt-sass &>/dev/null
-    npm install -g grunt-cssjanus &>/dev/null
-    npm install -g grunt-rtlcss &>/dev/null
+    sudo -i -u vagrant npm install -g grunt-cli &>/dev/null
+  fi
+
+  # Bower
+  #
+  # Install or update Bower based on current state.
+  if [[ "$(bower --version)" ]]; then
+    echo "Updating Bower..."
+    sudo -i -u vagrant npm update -g bower &>/dev/null
+  else
+    echo "Installing Bower..."
+    sudo -i -u vagrant npm install -g bower &>/dev/null
+  fi
+
+  # Sympm
+  #
+  # Install or update Sympm based on current state.
+  if [[ "$(sympm --version)" ]]; then
+    echo "Updating Sympm..."
+    sudo -i -u vagrant npm update -g sympm &>/dev/null
+  else
+    echo "Installing Sympm..."
+    sudo -i -u vagrant npm install -g sympm &>/dev/null
   fi
 
   # Graphviz
@@ -337,6 +342,30 @@ tools_install() {
   # config and actual path.
   echo "Adding graphviz symlink for Webgrind..."
   ln -sf "/usr/bin/dot" "/usr/local/bin/dot"
+}
+
+node_setup() {
+  # NVM
+  #
+  # Installs NVM. NVM allows us to install the current version of Node.
+  if [[ "$(nvm --version)" ]]; then
+    echo "Updating NVM"
+  else
+    echo "Installing NVM from source"
+    echo -e "\n[[ -e ~/.nvm/nvm.sh ]] && source ~/.nvm/nvm.sh" >> ~vagrant/.bash_profile
+  fi
+
+  # Installing and updating are handled within the install script
+  curl -L -O https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh
+  sudo -i -u vagrant bash install.sh
+  rm install.sh
+
+  source "~vagrant/.nvm/nvm.sh"
+
+  # Install Node stable
+  echo "Installing Node stable"
+  sudo -i -u vagrant nvm install node
+  sudo -i -u vagrant nvm alias default node
 }
 
 apache_setup() {
@@ -460,7 +489,7 @@ if [[ ! -f "$SOFILE" ]]; then
 
   if [[ "$REPLY" =~ ^[Yy]$ ]]; then
     echo "Installing PHP version $VERSION..."
-    sudo -E -i -u vagrant phpbrew install "php-$VERSION" +default +mysql +debug +apxs2=/usr/bin/apxs2 -- --with-mysql-sock=/var/run/mysqld/mysqld.sock --with-config-file-scan-dir=/etc/php5/apache2/custom-conf.d/
+    sudo -E -i -u vagrant phpbrew install "php-$VERSION" +default +mysql +debug +iconv +apxs2=/usr/bin/apxs2 -- --with-mysql-sock=/var/run/mysqld/mysqld.sock --with-config-file-scan-dir=/etc/php5/apache2/custom-conf.d/
   else
     exit 0
   fi
@@ -476,7 +505,6 @@ sudo -E su vagrant <<END
   phpbrew ext install openssl || echo "Failed to install openssl"
   phpbrew ext install memcache || echo "Failed to install memcache"
   phpbrew ext install imagick || echo "Failed to install imagick"
-  phpbrew ext install iconv || echo "Failed to install iconv"
   phpbrew ext install xdebug && phpbrew ext disable xdebug || echo "Failed to install xdebug"
 END
 
@@ -547,11 +575,10 @@ mysql_setup() {
   fi
 }
 
-mailcatcher_setup() {
-  # Mailcatcher
+rvm_setup() {
+  # RVM
   #
-  # Installs mailcatcher using RVM. RVM allows us to install the
-  # current version of ruby and all mailcatcher dependencies reliably.
+  # Installs RVM. RVM allows us to install the current version of Ruby.
   local pkg
 
   rvm_version="$(/usr/bin/env rvm --silent --version 2>&1 | grep 'rvm ' | cut -d " " -f 2)"
@@ -571,6 +598,17 @@ mailcatcher_setup() {
     curl --silent -L "https://get.rvm.io" | bash -s stable --ruby
     source "/usr/local/rvm/scripts/rvm"
   fi
+
+  # Install bundler gem
+  gem install bundler
+}
+
+mailcatcher_setup() {
+  # Mailcatcher
+  #
+  # Installs mailcatcher using RVM. RVM allows us to install all mailcatcher
+  # dependencies reliably.
+  local pkg
 
   mailcatcher_version="$(/usr/bin/env mailcatcher --version 2>&1 | grep 'mailcatcher ' | cut -d " " -f 2)"
   if [[ -n "${mailcatcher_version}" ]]; then
@@ -757,17 +795,18 @@ xo_install() {
   # Install xo
   if [[ ! -f "/usr/local/bin/xo" ]]; then
     echo "Installing xo (https://github.com/ezekg/xo)"
-    curl -L https://github.com/ezekg/xo/releases/download/0.2.2/xo_0.2.2_linux_amd64.tar.gz -O
+    curl -L -O https://github.com/ezekg/xo/releases/download/0.2.2/xo_0.2.2_linux_amd64.tar.gz
     tar -xvzf xo_0.2.2_linux_amd64.tar.gz
+    rm xo_0.2.2_linux_amd64.tar.gz
     chmod +x xo_0.2.2_linux_amd64/xo
     mv xo_0.2.2_linux_amd64/xo /usr/local/bin/
-    rm -rf xo_0.2.2_linux_amd64
+    rm -rf xo_0.2.2_linux_amd64&
   fi
 }
 
 ssl_cert_setup() {
   echo "Adding self-signed SSL certs"
-  sites=$(cat /etc/apache2/custom-sites/*.conf | xo '/\*:443.*?ServerName\s([-.0-9A-Za-z]+)/$1/mis')
+  sites=$(cat /etc/apache2/custom-sites/*.conf | xo '/\*:443.*?ServerName\s(www)?\.?([-.0-9A-Za-z]+)/$1?:www.$2/mis')
 
   # Install a cert for each domain
   for site in $sites; do
@@ -790,6 +829,7 @@ ssl_cert_setup() {
 
     mv "$domain.key" /etc/ssl/private/
     mv "$domain.pem" /etc/ssl/certs/
+    rm "$domain.csr"
 
     echo " * Created cert for $domain"
   done
@@ -801,20 +841,22 @@ ssl_cert_setup() {
 network_check
 
 # Profile_setup
-echo "Bash profile setup and directories."
+echo "Bash profile setup and directories"
 profile_setup
 
 network_check
 
 # Package and Tools Install
 echo " "
-echo "Tool packages check and install."
+echo "Main packages check and install"
 package_install
-tools_install
-xo_install
 
-echo "Main packages check and install."
+echo "Tool packages check and install"
+xo_install
+node_setup
+tools_setup
 apache_setup
+rvm_setup
 mailcatcher_setup
 php_setup
 services_restart
