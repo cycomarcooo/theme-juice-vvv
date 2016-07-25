@@ -2,10 +2,12 @@ Vagrant.configure "2" do |config|
   vagrant_version = Vagrant::VERSION.sub /^v/, ""
   vagrant_dir = File.expand_path File.dirname(__FILE__)
 
+  config.vbguest.auto_update = false
+
   # VirtualBox configuration
   config.vm.provider :virtualbox do |v|
-    v.customize ["modifyvm", :id, "--memory", 1024]
-    v.customize ["modifyvm", :id, "--cpus", 1]
+    v.customize ["modifyvm", :id, "--memory", 2048]
+    v.customize ["modifyvm", :id, "--cpus", 2]
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
   end
@@ -18,7 +20,7 @@ Vagrant.configure "2" do |config|
   # box containing the Ubuntu 14.04 Trusty 64 bit release. Once this box is downloaded
   # to your host computer, it is cached for future use under the specified box name.
   config.vm.box = "themejuice/graft"
-  config.vm.box_version = "1.0.3"
+  config.vm.box_version = "1.0.2"
   config.vm.hostname = "graft.dev"
 
   # If the Vagrant plugin hostsupdater (https://github.com/cogitatio/vagrant-hostsupdater) is
@@ -99,19 +101,19 @@ Vagrant.configure "2" do |config|
   eval IO.read(customfile), binding if File.exist? customfile
 
   # # Provisioning scripts
-  # provision_scripts = %w[
+  provision_scripts = %w[
   #   packages
-  #   tools
+     tools
   #   xo
   #   node
   #   rvm
   #   mailcatcher
   #   php
   #   wp
-  #   memcached
+     memcached
   #   opcached
-  #   webgrind
-  #   phpmyadmin
+     webgrind
+     phpmyadmin
   # ]
   # provision_scripts.each do |script|
   #   config.vm.provision :shell, {
