@@ -19,7 +19,8 @@ echo " * /srv/config/apache-config/httpd.conf -> /etc/apache2/httpd.conf"
 echo " * /srv/config/apache-config/sites/ -> /etc/apache2/custom-sites/"
 
 # Configure Apache
-a2enmod actions fastcgi alias
+a2dismod php5.6 mpm_prefork
+a2enmod actions fastcgi alias mpm_worker
 
 # Enable mod_rewrite
 a2enmod rewrite
