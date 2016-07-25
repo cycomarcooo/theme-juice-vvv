@@ -13,8 +13,8 @@
 /Customfile
 
 # Allow for custom provisioning scripts that are not included with the repo
-/scripts/custom/*
-!/scripts/custom/.keep
+#/scripts/custom/*
+#!/scripts/custom/.keep
 
 # No need to share individual site configs with each other
 /config/apache-config/sites/*.conf
