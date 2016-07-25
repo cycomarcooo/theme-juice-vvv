@@ -46,7 +46,7 @@ apt_package_check_list=(
   php5.6-gd
   openssl
   # php5.6-apc
-  # php5.6-cgi
+  php5.6-cgi
 
   apache2-mpm-worker
 )
@@ -83,7 +83,8 @@ else
   apt-get clean
 fi
 
-a2dismod php5
-a2enmod php5.6
+# Disable non thread safe modules
+a2dismod php5 php5.6 mpm_prefork
+a2enmod mpm_worker
 
 service apache2 restart

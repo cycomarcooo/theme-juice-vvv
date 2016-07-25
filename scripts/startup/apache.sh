@@ -12,15 +12,20 @@ fi
 # Copy Apache configuration from local
 rsync -rvzh "/srv/config/apache-config/apache2.conf" "/etc/apache2/apache2.conf"
 rsync -rvzh "/srv/config/apache-config/httpd.conf" "/etc/apache2/httpd.conf"
+rsync -rvzh "/srv/config/apache-config/php-fastcgi-wrapper" "/usr/local/bin/php-fastcgi-wrapper"
 rsync -rvzh --delete "/srv/config/apache-config/sites/" "/etc/apache2/custom-sites/"
+
+chown vagrant:www-data "/usr/local/bin/php-fastcgi-wrapper"
+chmod +x "/usr/local/bin/php-fastcgi-wrapper"
 
 echo " * /srv/config/apache-config/apache2.conf -> /etc/apache2/apache2.conf"
 echo " * /srv/config/apache-config/httpd.conf -> /etc/apache2/httpd.conf"
+echo " * /srv/config/apache-config/php-fastcgi-wrapper -> /usr/local/bin/php-fastcgi-wrapper"
 echo " * /srv/config/apache-config/sites/ -> /etc/apache2/custom-sites/"
 
 # Configure Apache
-a2dismod php5.6 mpm_prefork
-a2enmod actions fastcgi alias mpm_worker
+#a2dismod php5.6 mpm_prefork
+a2enmod actions fastcgi alias
 
 # Enable mod_rewrite
 a2enmod rewrite
